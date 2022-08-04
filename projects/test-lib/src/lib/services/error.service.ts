@@ -18,7 +18,7 @@ export class TestErrorsService {
       return;
     } else {
 
-      this.loggerService.emit(error)
+      this.loggerService.setLog(error)
     }
 
   }

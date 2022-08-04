@@ -7,7 +7,8 @@ import { ENV_PRODUCTION } from '../constants/env-production';
 import { LogConfig, LogMessage } from '../models/log-types';
 import { Queue } from '../models/queue';
 
-import { filter, interval, map, merge, Observable, of, switchMap, tap } from 'rxjs';
+import { filter, interval, map, merge, of, Subscription, tap } from 'rxjs';
+import { takeUntilDestroy$ } from '../di-functions/takeUntilDestroy';
 
 
 @Injectable({
@@ -41,38 +42,35 @@ export class LoggerService<T = any> {
     };
   }
 
-  emit(error: Error): void {
+  private _setLog(error: Error): T {
     const { formatMessage } = this.logConfig
-    const log = formatMessage!(error)
-    this.errorQue.enqueue(log)
-
-
+    return formatMessage!(error)
 
   }
 
-  logger(): Observable<void> {
+  setLog(error: Error): void {
+    this.errorQue.enqueue(this._setLog(error))
+  }
 
-    const source = interval(this.logConfig.interval)
+  logger(): Subscription {
 
-
-    console.log(this.production)
-    const dev = of(this.production).pipe(
-      // filter(() => !this.production),
-      tap(() => console.log('Logger Service only works on production')),
+    const dev$ = of(this.production).pipe(
+      filter((production) => !production),
+      tap(() => console.log('Server error only works pn production')),
       map(() => { })
     )
 
-    const prod = source.pipe(
-      filter(() => this.production),
-      filter(() => this.errorQue.size() > 0),
+    const prod$ = interval(this.logConfig.interval).pipe(
+      filter(() => this.errorQue.size() > 0 && this.production),
       tap(() => console.log('interval for ', this.logConfig.interval, ' seconds')),
-      map(() => { }))
+      map(() => this._write()))
 
+    const source$ = merge(prod$, dev$).pipe(takeUntilDestroy$())
 
-    return dev
+    return source$.subscribe()
   }
 
-  write(): void {
+  private _write(): void {
     const { target, queue } = this.logConfig
     const log = queue ? this.errorQue : this.errorQue.dequeue()!
 

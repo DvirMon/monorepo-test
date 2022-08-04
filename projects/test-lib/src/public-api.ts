@@ -10,3 +10,5 @@ export * from './lib/services/error.service';
 export * from './lib/models/queue';
 
 export * from './lib/lib.configuration'
+
+export * from './lib/di-functions/takeUntilDestroy'

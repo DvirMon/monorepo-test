@@ -2,6 +2,7 @@ import { Component, Inject, inject } from '@angular/core';
 import { LOGS_CONFIGURATION } from 'projects/test-lib/src/lib/constants/log-config';
 import { LogConfig } from 'projects/test-lib/src/lib/models/log-types';
 import { LoggerService } from 'projects/test-lib/src/public-api';
+import { of, tap } from 'rxjs';
 
 @Component({
   selector: 'app-root',
@@ -17,7 +18,7 @@ export class AppComponent {
 
   errorCount: number = 0
 
-
+  show: boolean = true
 
   constructor(
     @Inject(LOGS_CONFIGURATION) private logConfig: LogConfig
@@ -32,7 +33,8 @@ export class AppComponent {
   }
 
   onThrowError(): void {
-    this.errorCount += 1
-    throw Error('TEST ERROR: ' + this.errorCount)
+    this.show = !this.show
+    // this.errorCount += 1
+    // throw Error('TEST ERROR: ' + this.errorCount)
   }
 }
