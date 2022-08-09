@@ -1,4 +1,4 @@
-import { BehaviorSubject, filter, map, mergeMap, Observable, Subject } from "rxjs";
+import { BehaviorSubject, concatAll, filter, map, mergeMap, Observable, Subject } from "rxjs";
 
 interface QueueConfig<T = any> {
   enqueue(item: T): void;
@@ -10,21 +10,24 @@ export class Queue<T = any> implements QueueConfig<T>{
 
   private _items: T[];
   private _queue = new Subject<Observable<T>>();
-  public items$!: Observable<T>
+  private _items$!: Observable<T>
 
 
   constructor(...params: T[]) {
     this._items = [...params];
-    this.items$ = this._setItems()
+    this._items$ = this._setItems()
   }
 
-  _setItems() {
-    return this._queue.pipe(
-      mergeMap((item: Observable<T>) => item, 1));
+  private _setItems() {
+    return this._queue.pipe(concatAll());
   }
 
   addToQueue(item: Observable<T>): void {
     this._queue.next(item);
+  }
+
+  getItems(): Observable<T> {
+    return this._items$
   }
 
   enqueue(item: T): void {

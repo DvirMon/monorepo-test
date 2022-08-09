@@ -17,7 +17,6 @@ export class TestErrorsService {
     if (error instanceof HttpErrorResponse) {
       return;
     } else {
-      // this.loggerService.setLog(error)
       this.loggerService.add(error)
     }
 

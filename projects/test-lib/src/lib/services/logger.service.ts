@@ -7,7 +7,7 @@ import { ENV_PRODUCTION } from '../constants/env-production';
 import { LogConfig, LogMessage } from '../models/log-types';
 import { Queue } from '../models/queue';
 
-import { concatMap, filter, finalize, interval, map, merge, Observable, of, Subject, Subscription, takeUntil, tap, timer } from 'rxjs';
+import { concatAll, concatMap, delay, filter, finalize, interval, map, merge, Observable, of, Subject, Subscription, takeUntil, tap, timer } from 'rxjs';
 
 
 @Injectable({
@@ -15,107 +15,45 @@ import { concatMap, filter, finalize, interval, map, merge, Observable, of, Subj
 })
 export class LoggerService<T = any> implements OnDestroy {
 
+
+
+  private _queue = new Subject<Observable<T>>();
+  private _items$!: Observable<T>
+  private _destroy$: Subject<void> = new Subject()
+
   constructor(
     @Inject(ENV_PRODUCTION) private production: boolean,
     @Inject(LOGS_CONFIGURATION) private logConfig: LogConfig
   ) {
+    this._items$ = this._queue.pipe(concatAll());
   }
 
-
-  private _obsQueue$ = new Subject<Observable<T | LogMessage>>();
-
-  private errorQue: Queue<T> = new Queue<T>();
-  private error$: Subject<Error> = new Subject()
-  private destroy$: Subject<void> = new Subject()
 
   ngOnDestroy(): void {
-    this.destroy$.next()
-  }
-
-  public add(error: Error): void {
-    this._enqueue(this._setLog(error));
-  }
-
-  private _enqueue(log: T | LogMessage): void {
-    console.log('[QUEUING]')
-    console.log(log)
-    const subject = timer(3000).pipe(map(x => log));
-    this._obsQueue$.next(subject)
-
-  }
-
-  private process() : Subscription{
-    return this._obsQueue$
-      .pipe(
-        concatMap(log => log)
-        )
-      .subscribe(log => {
-        console.log('[PROCESSED]', log)
-      });
-
-  }
-
-  private _writeToConsole(logs: Queue<T> | T): void {
-    console.log('%cLogger Service :', 'font-weight : 600', logs)
-  }
-
-  private _writeToLocalStorage(logs: Queue<T> | T): void {
-    localStorage.setItem('log', JSON.stringify(logs))
-  }
-
-  handleBackendError(err: HttpErrorResponse): LogMessage {
-    const error = new Error(err.message)
-    const { stack, message } = error
-    return {
-      message,
-      stackTrace: stack || 'SERVER ERROR - NO STACK EXIST',
-      timeStamp: new Date()
-    };
+    this._destroy$.next()
   }
 
   private _setLog(error: Error): T {
     const { formatMessage } = this.logConfig
     return formatMessage!(error)
-
   }
 
-  setLog(error: Error): void {
-    this.errorQue.enqueue(this._setLog(error))
-    this.error$.next(error)
+  private _setLogObservable(error: Error): Observable<T> {
+    return of(this._setLog(error)).pipe(delay(this.logConfig.interval!))
   }
 
-  logger(): Subscription {
+  add(error: Error): void {
 
-    // const dev$ = this.error$.pipe(
-    //   filter(() => !this.production),
-    //   tap(() => console.log('LoggerServer only works on production')),
-    //   map(() => { })
-    // )
-
-    // this.error$.pipe(
-    //   filter(() => this.production),
-    //   map((error) => this.errorQue.enqueue(this._setLog(error))
-    //   )
-
-    // )
-
-    // const prod$ = interval(this.logConfig.interval).pipe(
-    //   filter(() => this.errorQue.size() > 0 && this.production),
-    //   tap(() => console.log('interval for ', this.logConfig.interval, ' seconds')),
-    //   map(() => this._write()))
-
-    // const source$ = merge(prod$, dev$).pipe(takeUntil(this.destroy$))
-
-
-    // return source$.subscribe()
-
-    return this.process()
+    if (this.production) {
+      const log$ = this._setLogObservable(error)
+      this._queue.next(log$);
+    } else {
+      console.log('Logger Service only works on production')
+    }
   }
 
-  private _write(): void {
-    const { target, queue } = this.logConfig
-    const log = queue ? this.errorQue : this.errorQue.dequeue()!
-
+  private _write(log: T): void {
+    const { target } = this.logConfig
     switch (target) {
       case 'storage':
         this._writeToLocalStorage(log)
@@ -129,8 +67,44 @@ export class LoggerService<T = any> implements OnDestroy {
     }
   }
 
+  private _process(): Subscription {
+
+    return this._items$
+      .pipe(
+        filter(() => this.production),
+        tap(() => console.log(this.logConfig.interval! / 1000, 'sec pass')),
+        takeUntil(this._destroy$)
+      )
+      .subscribe({ next: (val) => this._write(val) },)
+  }
+
+  private _writeToConsole(logs: Queue<T> | T): void {
+    console.log('%cLogger Service :', 'font-weight : 600', logs)
+  }
+
+  private _writeToLocalStorage(logs: Queue<T> | T): void {
+    localStorage.setItem('log', JSON.stringify(logs))
+  }
 
 
+
+  logger(): Subscription {
+    return this._process()
+  }
+
+
+
+
+
+  handleBackendError(err: HttpErrorResponse): LogMessage {
+    const error = new Error(err.message)
+    const { stack, message } = error
+    return {
+      message,
+      stackTrace: stack || 'SERVER ERROR - NO STACK EXIST',
+      timeStamp: new Date()
+    };
+  }
 
 
 
