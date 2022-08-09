@@ -18,10 +18,7 @@ export class AppComponent {
 
   errorCount: number = 0
 
-  show: boolean = true
-
   constructor(
-    @Inject(LOGS_CONFIGURATION) private logConfig: LogConfig
 
   ) {
   }
@@ -33,8 +30,7 @@ export class AppComponent {
   }
 
   onThrowError(): void {
-    this.show = !this.show
-    // this.errorCount += 1
-    // throw Error('TEST ERROR: ' + this.errorCount)
+    this.errorCount += 1
+    throw Error('TEST ERROR: ' + this.errorCount)
   }
 }

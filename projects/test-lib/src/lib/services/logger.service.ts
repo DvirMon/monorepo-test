@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Inject, Injectable } from "@angular/core"
+import { Inject, Injectable, OnDestroy } from "@angular/core"
 
 import { LOGS_CONFIGURATION } from '../constants/log-config';
 import { ENV_PRODUCTION } from '../constants/env-production';
@@ -7,14 +7,13 @@ import { ENV_PRODUCTION } from '../constants/env-production';
 import { LogConfig, LogMessage } from '../models/log-types';
 import { Queue } from '../models/queue';
 
-import { filter, interval, map, merge, of, Subscription, tap } from 'rxjs';
-import { takeUntilDestroy$ } from '../di-functions/takeUntilDestroy';
+import { concatMap, filter, finalize, interval, map, merge, Observable, of, Subject, Subscription, takeUntil, tap, timer } from 'rxjs';
 
 
 @Injectable({
   providedIn: 'root'
 })
-export class LoggerService<T = any> {
+export class LoggerService<T = any> implements OnDestroy {
 
   constructor(
     @Inject(ENV_PRODUCTION) private production: boolean,
@@ -22,7 +21,39 @@ export class LoggerService<T = any> {
   ) {
   }
 
+
+  private _obsQueue$ = new Subject<Observable<T | LogMessage>>();
+
   private errorQue: Queue<T> = new Queue<T>();
+  private error$: Subject<Error> = new Subject()
+  private destroy$: Subject<void> = new Subject()
+
+  ngOnDestroy(): void {
+    this.destroy$.next()
+  }
+
+  public add(error: Error): void {
+    this._enqueue(this._setLog(error));
+  }
+
+  private _enqueue(log: T | LogMessage): void {
+    console.log('[QUEUING]')
+    console.log(log)
+    const subject = timer(3000).pipe(map(x => log));
+    this._obsQueue$.next(subject)
+
+  }
+
+  private process() : Subscription{
+    return this._obsQueue$
+      .pipe(
+        concatMap(log => log)
+        )
+      .subscribe(log => {
+        console.log('[PROCESSED]', log)
+      });
+
+  }
 
   private _writeToConsole(logs: Queue<T> | T): void {
     console.log('%cLogger Service :', 'font-weight : 600', logs)
@@ -50,24 +81,35 @@ export class LoggerService<T = any> {
 
   setLog(error: Error): void {
     this.errorQue.enqueue(this._setLog(error))
+    this.error$.next(error)
   }
 
   logger(): Subscription {
 
-    const dev$ = of(this.production).pipe(
-      filter((production) => !production),
-      tap(() => console.log('Server error only works pn production')),
-      map(() => { })
-    )
+    // const dev$ = this.error$.pipe(
+    //   filter(() => !this.production),
+    //   tap(() => console.log('LoggerServer only works on production')),
+    //   map(() => { })
+    // )
 
-    const prod$ = interval(this.logConfig.interval).pipe(
-      filter(() => this.errorQue.size() > 0 && this.production),
-      tap(() => console.log('interval for ', this.logConfig.interval, ' seconds')),
-      map(() => this._write()))
+    // this.error$.pipe(
+    //   filter(() => this.production),
+    //   map((error) => this.errorQue.enqueue(this._setLog(error))
+    //   )
 
-    const source$ = merge(prod$, dev$).pipe(takeUntilDestroy$())
+    // )
 
-    return source$.subscribe()
+    // const prod$ = interval(this.logConfig.interval).pipe(
+    //   filter(() => this.errorQue.size() > 0 && this.production),
+    //   tap(() => console.log('interval for ', this.logConfig.interval, ' seconds')),
+    //   map(() => this._write()))
+
+    // const source$ = merge(prod$, dev$).pipe(takeUntil(this.destroy$))
+
+
+    // return source$.subscribe()
+
+    return this.process()
   }
 
   private _write(): void {

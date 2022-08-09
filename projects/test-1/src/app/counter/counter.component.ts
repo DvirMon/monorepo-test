@@ -10,13 +10,13 @@ import { interval } from 'rxjs';
 export class CounterComponent implements OnInit {
 
 
-  source$ = interval(1000).pipe(takeUntilDestroy$())
+  // source$ = interval(1000).pipe(takeUntilDestroy$())
 
   constructor() { }
 
   ngOnInit(): void {
 
-    this.source$.subscribe((value) => console.log('timer', value));
+    // this.source$.subscribe((value) => console.log('timer', value));
 
   }
 

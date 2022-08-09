@@ -16,7 +16,7 @@ import { CounterComponent } from './counter/counter.component';
   imports: [
     BrowserModule,
     AppRoutingModule,
-    TestLibModule.forRoot({ production: environment.production }),
+    TestLibModule.forRoot({ production: !environment.production }),
   ],
   providers: [
     // {
