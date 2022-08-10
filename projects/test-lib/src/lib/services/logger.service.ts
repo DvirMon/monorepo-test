@@ -30,40 +30,40 @@ export class LoggerService<T = any> implements OnDestroy {
 
 
   ngOnDestroy(): void {
-    this._destroy$.next()
+    this._destroy$.next();
   }
 
   private _setLog(error: Error): T {
-    const { formatMessage } = this.logConfig
-    return formatMessage!(error)
+    const { formatMessage } = this.logConfig;
+    return formatMessage!(error);
   }
 
   private _setLogObservable(error: Error): Observable<T> {
-    return of(this._setLog(error)).pipe(delay(this.logConfig.interval!))
+    return of(this._setLog(error)).pipe(delay(this.logConfig.interval!));
   }
 
   add(error: Error): void {
 
     if (this.production) {
-      const log$ = this._setLogObservable(error)
+      const log$ = this._setLogObservable(error);
       this._queue.next(log$);
     } else {
-      console.log('Logger Service only works on production')
+      console.log('Logger Service only works on production');
     }
   }
 
   private _write(log: T): void {
-    const { target } = this.logConfig
+    const { target } = this.logConfig;
     switch (target) {
       case 'storage':
-        this._writeToLocalStorage(log)
+        this._writeToLocalStorage(log);
         break;
       case 'console':
-        this._writeToConsole(log)
+        this._writeToConsole(log);
         break;
       default:
-        this._writeToLocalStorage(log)
-        this._writeToConsole(log)
+        this._writeToLocalStorage(log);
+        this._writeToConsole(log);
     }
   }
 
@@ -75,36 +75,31 @@ export class LoggerService<T = any> implements OnDestroy {
         tap(() => console.log(this.logConfig.interval! / 1000, 'sec pass')),
         takeUntil(this._destroy$)
       )
-      .subscribe({ next: (val) => this._write(val) },)
+      .subscribe({ next: (val) => this._write(val) },);
   }
 
   private _writeToConsole(logs: Queue<T> | T): void {
-    console.log('%cLogger Service :', 'font-weight : 600', logs)
+    console.log('%cLogger Service :', 'font-weight : 600', logs);
   }
 
   private _writeToLocalStorage(logs: Queue<T> | T): void {
-    localStorage.setItem('log', JSON.stringify(logs))
+    localStorage.setItem('log', JSON.stringify(logs));
   }
-
-
 
   logger(): Subscription {
-    return this._process()
+    return this._process();
   }
 
 
-
-
-
-  handleBackendError(err: HttpErrorResponse): LogMessage {
-    const error = new Error(err.message)
-    const { stack, message } = error
-    return {
-      message,
-      stackTrace: stack || 'SERVER ERROR - NO STACK EXIST',
-      timeStamp: new Date()
-    };
-  }
+  // handleBackendError(err: HttpErrorResponse): LogMessage {
+  //   const error = new Error(err.message)
+  //   const { stack, message } = error
+  //   return {
+  //     message,
+  //     stackTrace: stack || 'SERVER ERROR - NO STACK EXIST',
+  //     timeStamp: new Date()
+  //   };
+  // }
 
 
 
