@@ -1,4 +1,4 @@
-import { discardPeriodicTasks, fakeAsync, flush, flushMicrotasks, TestBed, tick } from '@angular/core/testing';
+import { fakeAsync, TestBed, tick } from '@angular/core/testing';
 import { ENV_PRODUCTION } from '../constants/env-production';
 import { LoggerConfig } from '../models/log-types';
 
@@ -38,10 +38,10 @@ describe('LoggerService', () => {
     expect(config.target).toBe(undefined);
   });
 
-  fit('logger add method should emit error object', fakeAsync(() => {
+  it('logger add method should emit error object', fakeAsync(() => {
 
     const config = logger.getConfiguration();
-    const queue$ = logger.getItems()
+    const queue$ = logger.getItems();
 
     queue$.subscribe({
       next: (val) => {
@@ -55,7 +55,27 @@ describe('LoggerService', () => {
 
     logger.add(error);
 
-    tick(config.interval)
+    tick(config.interval);
+
+  }));
+
+  it('log method should flush error as queue', fakeAsync(() => {
+
+    const config = logger.getConfiguration();
+
+    // queue$.subscribe({
+    //   next: (val) => {
+
+    //     const { message } = val
+
+    //     expect(val).toBeTruthy();
+    //     expect(message).toEqual('Test Error');
+    //   }
+    // });
+
+    logger.add(error);
+
+    tick(config.interval);
 
   }));
 });

@@ -2,10 +2,10 @@ import { Inject, Injectable, OnDestroy } from "@angular/core"
 
 import { ENV_PRODUCTION } from '../constants/env-production';
 ;
-import { LogConfig, LoggerConfig } from '../models/log-types';
+import { LoggerConfig } from '../models/log-types';
 import { Queue } from '../models/queue';
 
-import { BehaviorSubject, concatAll, delay, filter, mergeAll, Observable, of, Subject, Subscription, takeUntil, tap } from 'rxjs';
+import { concatAll, delay, filter, merge, mergeAll, Observable, of, Subject, Subscription, switchAll, takeUntil, tap } from 'rxjs';
 
 
 @Injectable({
@@ -35,7 +35,17 @@ export class LoggerService<T = any> implements OnDestroy {
   }
 
   private _setLogObservable(error: Error): Observable<T> {
-    return of(this._setLog(error)).pipe(delay(this.logConfig.interval!));
+    const { queue } = this.logConfig;
+
+    const queueTrue$ = of(this._setLog(error))
+      .pipe(
+        filter(() => queue),
+        delay(this.logConfig.interval!)
+      );
+
+    const queueFalse$ = of(this._setLog(error)).pipe(filter(() => !queue));
+
+    return merge(queueTrue$, queueFalse$)
   }
 
   add(error: Error): void {
