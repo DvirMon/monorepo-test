@@ -1,8 +1,5 @@
-import { Component, Inject, inject } from '@angular/core';
-import { LOGS_CONFIGURATION } from 'projects/test-lib/src/lib/constants/log-config';
-import { LogConfig } from 'projects/test-lib/src/lib/models/log-types';
+import { Component, inject } from '@angular/core';
 import { LoggerService } from 'projects/test-lib/src/public-api';
-import { of, tap } from 'rxjs';
 
 @Component({
   selector: 'app-root',
@@ -26,7 +23,7 @@ export class AppComponent {
 
   ngOnInit() {
 
-    this.loggerService.logger()
+    this.loggerService.getItems().subscribe({ next: (val) => console.log(val) })
   }
 
   onThrowError(): void {

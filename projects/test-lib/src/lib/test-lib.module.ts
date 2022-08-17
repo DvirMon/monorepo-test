@@ -1,8 +1,7 @@
 import { ModuleWithProviders, NgModule } from '@angular/core';
 import { LibConfig } from './lib.configuration';
-import { LoggerConfig, LogMessage } from './models/log-types';
+import { LoggerConfig } from './models/log-types';
 
-import { LOGS_CONFIGURATION } from './constants/log-config';
 import { ENV_PRODUCTION } from './constants/env-production';
 
 
@@ -28,7 +27,7 @@ export class TestLibModule {
           useValue: production // only for testing
         },
         {
-          provide: LOGS_CONFIGURATION,
+          provide: LoggerConfig,
           useValue: new LoggerConfig({ ...logConfig })
         }
       ]

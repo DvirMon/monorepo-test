@@ -21,18 +21,17 @@ export class LoggerConfig<T = any | LogMessage> implements LogConfig<T | LogMess
   formatMessage?: (data?: any) => T | LogMessage
 
   constructor(
-    options: {
+    options?: {
       target?: 'console' | 'storage' | undefined,
       interval?: number,
       queue?: boolean,
       formatMessage?: (data?: any) => T | LogMessage
     }
   ) {
-
-    this.target = options.target
-    this.interval = options.interval || 5000
-    this.queue = options.queue === false ? false : true
-    this.formatMessage = options.formatMessage || this._formatMessage
+    this.target = options?.target
+    this.interval = options?.interval || 5000
+    this.queue = options?.queue === false ? false : true
+    this.formatMessage = options?.formatMessage || this._formatMessage
   }
 
   private _formatMessage(error: Error): LogMessage {
